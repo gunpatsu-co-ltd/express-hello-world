@@ -1,61 +1,42 @@
-const express = require("express");
+// 必要なモジュールの読み込み
+const express = require('express');
+const axios = require('axios');
 const app = express();
-const port = process.env.PORT || 3001;
 
-app.get("/", (req, res) => res.type('html').send(html));
+// ポート番号
+const PORT = 3001; // 3000でもOK、他アプリが使ってなければ
 
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+// 環境変数からAPIキーを取得（次ステップで設定します）
+const API_KEY = process.env.LIBRARY_API_KEY || 'ここにあなたのAPIキー';
 
-server.keepAliveTimeout = 120 * 1000;
-server.headersTimeout = 120 * 1000;
+// サンプルAPI中継エンドポイント
+app.get('/proxy', async (req, res) => {
+    try {
+        // クエリパラメータ取得（例: city, from, to）
+        const { city, from, to } = req.query;
 
-const html = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Hello from Render!</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-    <script>
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          disableForReducedMotion: true
+        // 外部API（不動産情報ライブラリ）にリクエスト
+        const response = await axios.get('https://api.land.mlit.go.jp/webland/v2/api/TradeListSearch', {
+            params: { city, from, to },
+            headers: {
+                'Ocp-Apim-Subscription-Key': API_KEY
+            }
         });
-      }, 500);
-    </script>
-    <style>
-      @import url("https://p.typekit.net/p.css?s=1&k=vnd5zic&ht=tk&f=39475.39476.39477.39478.39479.39480.39481.39482&a=18673890&app=typekit&e=css");
-      @font-face {
-        font-family: "neo-sans";
-        src: url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff2"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/d?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/a?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("opentype");
-        font-style: normal;
-        font-weight: 700;
-      }
-      html {
-        font-family: neo-sans;
-        font-weight: 700;
-        font-size: calc(62rem / 16);
-      }
-      body {
-        background: white;
-      }
-      section {
-        border-radius: 1em;
-        padding: 1em;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin-right: -50%;
-        transform: translate(-50%, -50%);
-      }
-    </style>
-  </head>
-  <body>
-    <section>
-      Hello from Render!
-    </section>
-  </body>
-</html>
-`
+
+        // 結果をそのまま返却
+        res.json(response.data);
+
+    } catch (error) {
+        res.status(500).json({ error: 'API連携エラー', detail: error.message });
+    }
+});
+
+// 動作確認用トップページ
+app.get('/', (req, res) => {
+    res.send('Renderからこんにちは！ プロキシAPI稼働中');
+});
+
+// サーバー起動
+app.listen(PORT, () => {
+    console.log(`Example app listening on port ${PORT}!`);
+});
